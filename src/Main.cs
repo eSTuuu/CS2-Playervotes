@@ -1,11 +1,11 @@
 using CounterStrikeSharp.API;
 using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core.Capabilities;
 using CounterStrikeSharp.API.Modules.Admin;
 using CounterStrikeSharp.API.Modules.Commands;
+using CounterStrikeSharp.API.Modules.Menu;
+using MenuManager;
 using Microsoft.Extensions.Logging;
-using CS2MenuManager.API;
-using CS2MenuManager.API.Menu;
-using CS2MenuManager.API.Class;
 
 namespace Playervotes;
 
@@ -24,6 +24,18 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
     private readonly Dictionary<ulong, HashSet<ulong>> voteGagCounts = new();
     private readonly Dictionary<ulong, HashSet<ulong>> voteSilenceCounts = new();
 
+    private static readonly PluginCapability<IMenuApi?> MenuApi = new("menu:nfcore");
+    private IMenuApi? _menu;
+
+    public override void OnAllPluginsLoaded(bool hotReload)
+    {
+        try { _menu = MenuApi.Get(); }
+        catch { _menu = null; }
+
+        if (_menu == null)
+            Logger.LogError("MenuManager API (menu:nfcore) is not available. Player vote menus will not open.");
+    }
+
     public void OnConfigParsed(PlayervotesConfig config)
     {
         Config = config;
@@ -35,26 +47,20 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
 
         RegisterListener<Listeners.OnMapStart>(OnMapStart);
 
-        if (Config.EnableVotekick && !string.IsNullOrWhiteSpace(Config.Menutype))
-        AddCommand($"css_votekick", "Start votekick", OnVotekick);
+        if (Config.EnableVotekick)
+            AddCommand("css_votekick", "Start votekick", OnVotekick);
 
-        if (Config.EnableVoteban && !string.IsNullOrWhiteSpace(Config.Menutype))
-        AddCommand($"css_voteban", "Start voteban", OnVoteban);
+        if (Config.EnableVoteban)
+            AddCommand("css_voteban", "Start voteban", OnVoteban);
 
-        if (Config.EnableVotemute && !string.IsNullOrWhiteSpace(Config.Menutype))
-        AddCommand($"css_votemute", "Start votemute", OnVotemute);
+        if (Config.EnableVotemute)
+            AddCommand("css_votemute", "Start votemute", OnVotemute);
 
-        if (Config.EnableVotegag && !string.IsNullOrWhiteSpace(Config.Menutype))
-        AddCommand($"css_votegag", "Start votegag", OnVotegag);
+        if (Config.EnableVotegag)
+            AddCommand("css_votegag", "Start votegag", OnVotegag);
 
-        if (Config.EnableVotesilence && !string.IsNullOrWhiteSpace(Config.Menutype))
-        AddCommand($"css_votesilence", "Start votesilence", OnVotesilence);
-
-        if (string.IsNullOrWhiteSpace(Config.Menutype))
-        {
-            Logger.LogError("Commands disabled, menutype configuration is incorrect. Check the configuration file.");
-        }
-
+        if (Config.EnableVotesilence)
+            AddCommand("css_votesilence", "Start votesilence", OnVotesilence);
     }
     private void OnMapStart(string map)
     {
@@ -98,20 +104,7 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             }
         }
 
-        var menu = CreateMenu($"{Localizer["votekick.title"]}");
-        if (menu == null)
-            return;
-
-        foreach (var target in GetActivePlayers())
-        {
-            menu.AddItem(target.PlayerName, (client, option) =>
-            {
-                StartVote(client, target, "kick");
-                MenuManager.CloseActiveMenu(player);
-            });
-        }
-
-        menu.Display(player, 0);
+        OpenPlayerMenu(player, $"{Localizer["votekick.title"]}", "kick");
     }
 
     public void OnVoteban(CCSPlayerController? player, CommandInfo command)
@@ -145,20 +138,7 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             }
         }
 
-        var menu = CreateMenu($"{Localizer["voteban.title"]}");
-        if (menu == null)
-            return;
-
-        foreach (var target in GetActivePlayers())
-        {
-            menu.AddItem(target.PlayerName, (client, option) =>
-            {
-                StartVote(client, target, "ban");
-                MenuManager.CloseActiveMenu(player);
-            });
-        }
-
-        menu.Display(player, 0);
+        OpenPlayerMenu(player, $"{Localizer["voteban.title"]}", "ban");
     }
 
     public void OnVotemute(CCSPlayerController? player, CommandInfo command)
@@ -192,20 +172,7 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             }
         }
 
-        var menu = CreateMenu($"{Localizer["votemute.title"]}");
-        if (menu == null)
-            return;
-
-        foreach (var target in GetActivePlayers())
-        {
-            menu.AddItem(target.PlayerName, (client, option) =>
-            {
-                StartVote(client, target, "mute");
-                MenuManager.CloseActiveMenu(player);
-            });
-        }
-
-        menu.Display(player, 0);
+        OpenPlayerMenu(player, $"{Localizer["votemute.title"]}", "mute");
     }
 
     public void OnVotegag(CCSPlayerController? player, CommandInfo command)
@@ -239,20 +206,7 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             }
         }
 
-        var menu = CreateMenu($"{Localizer["votegag.title"]}");
-        if (menu == null)
-            return;
-
-        foreach (var target in GetActivePlayers())
-        {
-            menu.AddItem(target.PlayerName, (client, option) =>
-            {
-                StartVote(client, target, "gag");
-                MenuManager.CloseActiveMenu(player);
-            });
-        }
-
-        menu.Display(player, 0);
+        OpenPlayerMenu(player, $"{Localizer["votegag.title"]}", "gag");
     }
     public void OnVotesilence(CCSPlayerController? player, CommandInfo command)
     {
@@ -285,20 +239,7 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             }
         }
 
-        var menu = CreateMenu($"{Localizer["votesilence.title"]}");
-        if (menu == null)
-            return;
-
-        foreach (var target in GetActivePlayers())
-        {
-            menu.AddItem(target.PlayerName, (client, option) =>
-            {
-                StartVote(client, target, "silence");
-                MenuManager.CloseActiveMenu(player);
-            });
-        }
-
-        menu.Display(player, 0);
+        OpenPlayerMenu(player, $"{Localizer["votesilence.title"]}", "silence");
     }
 
     private void StartVote(CCSPlayerController voter, CCSPlayerController target, string action)
@@ -346,7 +287,7 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
 
         if (voteDictionary[target.SteamID].Contains(voter.SteamID))
         {
-            voter.PrintToChat($"{Localizer["alreadyvoted", action]}");
+            voter.PrintToChat($"{Localizer["alreadyvoted", voter.PlayerName, action, target.PlayerName]}");
             return;
         }
 
@@ -375,12 +316,12 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             }
             else if (action == "gag")
             {
-                Server.PrintToChatAll($"{Localizer["votegagged", target.PlayerName]}");
+                Server.PrintToChatAll($"{Localizer["votegagged", target.PlayerName, Config.GagDuration]}");
                 Server.ExecuteCommand($"css_gag #{target.UserId} {Config.GagDuration} \"{Config.GagReason}\"");
             }
             else if (action == "silence")
             {
-                Server.PrintToChatAll($"{Localizer["votesilenced", target.PlayerName]}");
+                Server.PrintToChatAll($"{Localizer["votesilenced", target.PlayerName, Config.SilenceDuration]}");
                 Server.ExecuteCommand($"css_silence #{target.UserId} {Config.SilenceDuration} \"{Config.SilenceReason}\"");
             }
             voteDictionary.Remove(target.SteamID);
@@ -389,7 +330,7 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
     private static List<CCSPlayerController> GetActivePlayers()
     {
         return Utilities.GetPlayers()
-            .Where(p => !p.IsHLTV && !p.IsBot && p.PlayerPawn.IsValid && p.Connected == PlayerConnectedState.PlayerConnected)
+            .Where(p => !p.IsHLTV && !p.IsBot && p.PlayerPawn.IsValid && p.Connected == PlayerConnectedState.Connected)
             .ToList();
     }
     private bool EnoughPlayers()
@@ -398,15 +339,26 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
         return activePlayersCount >= Config.RequiredPlayers;
     }
 
-    private BaseMenu? CreateMenu(string menuName)
+    private void OpenPlayerMenu(CCSPlayerController player, string title, string action)
     {
-        return Config.Menutype switch
+        if (_menu == null)
         {
-            "ChatMenu" => new ChatMenu(menuName, this),
-            "ConsoleMenu" => new ConsoleMenu(menuName, this),
-            "CenterHtml" => new CenterHtmlMenu(menuName, this),
-            "WasdMenu" => new WasdMenu(menuName, this),
-            _ => null
-        };
+            player.PrintToChat($"{Localizer["nomenu"]}");
+            return;
+        }
+
+        IMenu menu = _menu.GetMenu(title);
+        menu.PostSelectAction = PostSelectAction.Close;
+
+        foreach (var target in GetActivePlayers())
+        {
+            var voted = target;
+            menu.AddMenuOption(voted.PlayerName, (client, _) =>
+            {
+                StartVote(client, voted, action);
+            });
+        }
+
+        menu.Open(player);
     }
 }

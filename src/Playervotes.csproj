@@ -1,15 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="CounterStrikeSharp.API" Version="*" />
-        <PackageReference Include="CS2MenuManager" Version="1.0.41" />
+        <PackageReference Include="CounterStrikeSharp.API" Version="*">
+            <PrivateAssets>none</PrivateAssets>
+            <ExcludeAssets>runtime</ExcludeAssets>
+        </PackageReference>
+	</ItemGroup>
+
+    <ItemGroup>
+      <Reference Include="MenuManagerApi">
+        <HintPath>..\..\API\MenuManagerApi.dll</HintPath>
+      </Reference>
     </ItemGroup>
 
     <ItemGroup>

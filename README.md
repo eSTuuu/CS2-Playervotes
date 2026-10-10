@@ -38,12 +38,11 @@
 - Download the latest release from the releases tab and copy it into the csgo folder.
 
 **Requirements**
-- [CS2MenuManager](https://github.com/schwarper/CS2MenuManager)
+- [MenuManager](https://genesis-cs.space/menuconstructor/menumanager/api/index.html#start) (`MenuManagerApi.dll` in `addons/counterstrikesharp/shared/MenuManagerApi/`). The player picks the menu type with `!menu`.
 
 **Example config:**
 ```json
 {
-  "Menutype": "CenterHtml",    // ChatMenu, ConsoleMenu, CenterHtml, WasdMenu
   "RequiredVotePercentage": 80,
   "RequiredPlayers": 2,    // Min players to allow playervotes
   "ClearVotesOnMapStart": true,
