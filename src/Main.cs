@@ -250,25 +250,10 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             return;
         }
 
-        string[] flags = Config.VoteImmunity.Split(',').Select(flag => flag.Trim()).ToArray();
-        foreach (var flag in flags)
+        if (MatchesFlagOrGroup(target, Config.VoteImmunity))
         {
-            if (flag.StartsWith("#"))
-            {
-                if (AdminManager.PlayerInGroup(target, flag))
-                {
-                    voter.PrintToChat($"{Localizer["cantvote"]}");
-                    return;
-                }
-            }
-            else if (flag.StartsWith("@"))
-            {
-                if (AdminManager.PlayerHasPermissions(target, flag))
-                {
-                    voter.PrintToChat($"{Localizer["cantvote"]}");
-                    return;
-                }
-            }
+            voter.PrintToChat($"{Localizer["cantvote"]}");
+            return;
         }
         var voteDictionary = action switch
         {
@@ -333,6 +318,29 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
             .Where(p => !p.IsHLTV && !p.IsBot && p.PlayerPawn.IsValid && p.Connected == PlayerConnectedState.Connected)
             .ToList();
     }
+    private static bool MatchesFlagOrGroup(CCSPlayerController player, string list)
+    {
+        if (string.IsNullOrWhiteSpace(list))
+            return false;
+
+        foreach (var entry in list.Split(','))
+        {
+            var flag = entry.Trim();
+            if (flag.StartsWith('#'))
+            {
+                if (AdminManager.PlayerInGroup(player, flag))
+                    return true;
+            }
+            else if (flag.StartsWith('@'))
+            {
+                if (AdminManager.PlayerHasPermissions(player, flag))
+                    return true;
+            }
+        }
+
+        return false;
+    }
+
     private bool EnoughPlayers()
     {
         int activePlayersCount = GetActivePlayers().Count;
@@ -352,6 +360,9 @@ public class Playervotes : BasePlugin, IPluginConfig<PlayervotesConfig>
 
         foreach (var target in GetActivePlayers())
         {
+            if (MatchesFlagOrGroup(target, Config.HideFromMenu))
+                continue;
+
             var voted = target;
             menu.AddMenuOption(voted.PlayerName, (client, _) =>
             {

@@ -85,5 +85,8 @@ namespace Playervotes
 
         [JsonPropertyName("VoteImmunity")]
         public string VoteImmunity { get; set; } = "@css/vip, @css/vvip";
+
+        [JsonPropertyName("HideFromMenu")]
+        public string HideFromMenu { get; set; } = "@css/root, @css/generic";
     }
 }
